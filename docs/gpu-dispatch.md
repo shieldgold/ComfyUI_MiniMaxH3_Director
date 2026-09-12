@@ -6,37 +6,28 @@
 
 提交状态持久化到 SQLite；向目标发请求前先记录意图，网络超时或进程重启后不自动重发。面板提供「查询本次任务」和目标实例链接，结果保存在目标实例的历史记录中。状态 unknown 表示尚不能确认是否接收，需继续查询目标队列/历史，不应另建相同任务。
 
-## 部署范围
+## 配置和扩展
 
-当前服务器目标：GPU 3 / 8188、GPU 4 / 8189、GPU 5 / 8190、GPU 6 / 8191。
+调度服务使用部署环境提供的 JSON 配置。机器地址、实际端口、目录、来源白名单和任务记录应留在部署环境中，不提交到仓库。
 
-1. 部署新增 tools/gpu_broker.py 和 web/js/minimax_gpu.js。独立调度服务不需要重启 GPU 5。
-2. 在 GPU 3、6 的现有 YAML 后追加 GPU 5 的 minimax_h3 模型目录段，保留原有 Hunyuan/LTX 模型配置并备份文件；重新检查队列为空后才重启 GPU 3、6，使它们加载最新共享插件和模型列表。
-3. 新建 /etc/comfyui/director-gpus.json、director-gpu-broker.service 和 SQLite 状态目录；使用 comfyui 用户运行，限制写入 /var/lib/comfyui。
-4. 调度端口 8193 仅绑定 10.10.11.8，并添加独立 nftables 表，沿用现有 ComfyUI 的局域网白名单（10.0.0.0/8、127.0.0.0/8、192.168.0.0/16）。不会修改现有 ComfyUI 防火墙表。
-5. 创建未纳入 Git 的 web/js/gpu_instances.json，内容为 {"broker_port":8193}。浏览器刷新后出现面板。正在编辑的页面先保存工作流。
-6. 验收 GPU 状态、真实浏览器操作、跨实例小型图片任务、素材哈希和目标历史；不运行耗时视频生成测试，不中断 GPU 5。
+- `listen` / `port`：调度服务的监听地址和端口。
+- `database`：SQLite 文件路径，运行用户必须可写。
+- `origins`：允许访问调度服务的 ComfyUI 页面来源（完整协议、主机和端口）。
+- `instances`：实例数组；每项包含 `id`、物理卡编号 `gpu`、ComfyUI `port`，以及 `input`、`output`、`temp` 的绝对目录。
 
-配置示例（路径与 origin 必须按部署调整）：
+实例请求只发到本机回环地址；不接受浏览器提供任意服务器 URL。部署时限制为可信内网访问。Origin 白名单是浏览器访问边界，不替代网络隔离或用户认证。
 
-```json
-{
-  "listen": "127.0.0.1",
-  "port": 8193,
-  "database": "/var/lib/comfyui/director-broker/operations.sqlite",
-  "origins": ["http://localhost:8190", "http://localhost:8191"],
-  "instances": [
-    {"id":"gpu5", "gpu":5, "port":8190,
-     "input":"/var/lib/comfyui/gpu5/input", "output":"/var/lib/comfyui/gpu5/output", "temp":"/var/lib/comfyui/gpu5/temp"},
-    {"id":"gpu6", "gpu":6, "port":8191,
-     "input":"/var/lib/comfyui/gpu6/input", "output":"/var/lib/comfyui/gpu6/output", "temp":"/var/lib/comfyui/gpu6/temp"}
-  ]
-}
+使用 ComfyUI 已安装 aiohttp 的 Python 环境运行：
+
+```sh
+python tools/gpu_broker.py --config /path/to/local-config.json
 ```
 
-启动：`python tools/gpu_broker.py --config /etc/comfyui/director-gpus.json`。依赖 ComfyUI 已安装的 aiohttp；只支持配置中列出的同机实例，不接受浏览器提供任意服务器 URL。Origin 白名单是浏览器访问边界，不替代网络隔离或用户认证；此服务用于已受信任的内网 ComfyUI 环境。
+创建未纳入 Git 的 `web/js/gpu_instances.json`，将 `broker_port` 设置为部署配置中的监听端口。保存当前工作流并刷新浏览器后，面板出现。
 
-回滚：删除 gpu_instances.json 隐藏面板，停止独立 broker 服务及其防火墙服务，删除独立 nftables 表 director_broker_access；按需还原 GPU 3、6 YAML 备份并在空闲时重启。已生成的结果、同步素材及 SQLite 记录保留，避免丢失追踪证据。
+新增实例（包括 GPU 7）只需在 `instances` 中追加配置，并在 `origins` 中加入其页面来源。确认目标的导演台、模型和素材目录可用后，重启独立 broker 读取配置；已有 ComfyUI 服务无需因此重启。若目标需要补充插件或模型配置，应先确认其队列为空，再按部署环境要求操作。
+
+回滚时删除 `gpu_instances.json` 隐藏面板，停止独立 broker，并撤销对应网络规则；保留已生成结果、同步素材和 SQLite 记录，以便追踪任务。
 
 ## 验证
 
@@ -45,9 +36,6 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 node --test tests/*.test.mjs
 ```
 
-覆盖嵌套时间线和工作流同步、目标同名文件保护、output 转 input、缺失素材、越界和符号链接、重复提交/超时/重启、缺失节点及 Origin 边界。2026-09-12 已完成服务器部署及验收：
+测试覆盖嵌套时间线和工作流同步、目标同名文件保护、output 转 input、缺失素材、越界和符号链接、提示词保持原文、重复提交/超时/重启、缺失节点及 Origin 边界。
 
-- GPU 3、6 加载导演台，枚举到 H3 fl2va/ref2va、Qwen3-VL 文本编码器和音视频 VAE；原模型配置保留。
-- GPU 5 → GPU 6 测试任务 da2ff7f6-2ff7-4018-a9f2-e57b8cc67300 完成；重复提交返回同一任务，素材 SHA-256 和输出像素一致。
-- 真实浏览器从 GPU 6 面板提交到 GPU 3，任务 02939077-d883-407b-8fda-4280f7f8d7a4 完成，面板查询显示 completed。
-- 7 个调度测试和 6 个现有帧率测试通过。上述图片测试验证调度和素材链路，不代表已在 GPU 3、6 运行 H3 视频推理。GPU 5 未重启或中断。
+部署验收还应通过浏览器选择目标并提交小型图片工作流，核对目标历史、素材 SHA-256 和输出像素，验证重复提交返回同一任务编号。图片测试验证调度和素材链路，不代表已通过 H3 视频推理验收。
