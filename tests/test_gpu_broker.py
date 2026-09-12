@@ -65,7 +65,7 @@ class Submission(unittest.IsolatedAsyncioTestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.config = {'database': str(Path(self.tmp.name, 'ops.db')), 'origins': ['http://local:8190'],
-                       'instances': [{'id': 'gpu5', 'gpu': 5, 'port': 8190}]}
+                       'instances': [{'id': 'gpu5', 'gpu': 5, 'port': 8190, 'workflows': str(Path(self.tmp.name, 'workflows'))}]}
         self.broker = broker.Broker(self.config)
         self.addCleanup(self.broker.db.close)
         self.sent = 0
@@ -98,6 +98,25 @@ class Submission(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.sent, 1)
         self.body['workflow'] = {'changed': True}
         with self.assertRaises(ValueError): await self.send()
+
+    async def test_submission_saves_a_visible_workflow_before_dispatch(self):
+        self.body['workflow'] = {'version': 0.4, 'nodes': [{'id': 1}]}
+        result = await self.send()
+        root = Path(self.config['instances'][0]['workflows'])
+        files = list(root.rglob('*.json'))
+        self.assertEqual(len(files), 1, 'Target workflow browser must have a saved file')
+        self.assertEqual(json.loads(files[0].read_text()), self.body['workflow'])
+        self.assertEqual(result['workflow_file'], files[0].relative_to(root).as_posix())
+        files[0].write_text('{"edited_by_user": true}')
+        await self.send()
+        self.assertEqual(json.loads(files[0].read_text()), {'edited_by_user': True})
+
+    async def test_workflow_save_failure_prevents_dispatch(self):
+        root = Path(self.config['instances'][0]['workflows'])
+        root.write_text('not a directory')
+        with self.assertRaises(ValueError):
+            await self.send()
+        self.assertEqual(self.sent, 0)
 
     async def test_missing_nodes_fail_before_submission(self):
         self.body['prompt']['1']['class_type'] = 'Absent'

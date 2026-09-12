@@ -156,9 +156,24 @@ class Broker:
                 data, count = await asyncio.to_thread(transfer_assets, data, source, target, operation)
             else:
                 count = 0
+            workflow_file = f'Director-dispatch/{operation}.json'
+            if not target.get('workflows'):
+                raise ValueError('目标未配置 workflows 目录，无法保存工作流')
+            path = contained(target['workflows'], workflow_file)
+            workflow = data['extra_data']['extra_pnginfo']['workflow']
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if path.exists():
+                    if json.loads(path.read_text()) != workflow:
+                        raise ValueError('目标工作流文件已被修改，请创建新提交')
+                else:
+                    with path.open('x', encoding='utf-8') as output:
+                        json.dump(workflow, output, ensure_ascii=False, indent=2)
+            except OSError as exc:
+                raise ValueError('目标工作流保存失败，未提交生成任务') from exc
             data['prompt_id'] = operation
             result = {'state': 'unknown', 'prompt_id': operation, 'target': target['id'],
-                      'port': target['port'], 'assets': count,
+                      'port': target['port'], 'assets': count, 'workflow_file': workflow_file,
                       'message': '提交结果待核对；请查询状态，不要再次提交同一任务。'}
             # Persist intent BEFORE the request. A restart or timeout must not resend it.
             self.save(operation, digest, result)

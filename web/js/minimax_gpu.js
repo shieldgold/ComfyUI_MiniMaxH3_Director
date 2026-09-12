@@ -48,7 +48,7 @@ app.registerExtension({
         let operation = sessionStorage.getItem(storageKey);
         check.hidden = !operation;
         const show = data => {
-            result.textContent = `${data.message}\n任务：${data.prompt_id}\n状态：${data.state} · 同步素材 ${data.assets} 个`;
+            result.textContent = `${data.message}\n任务：${data.prompt_id}\n状态：${data.state} · 同步素材 ${data.assets} 个${data.workflow_file ? `\n目标工作流程列表：${data.workflow_file}` : ""}`;
             const target = new URL(location.origin);
             target.port = String(data.port);
             open.href = target.href;
