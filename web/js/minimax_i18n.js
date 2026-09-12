@@ -3,6 +3,11 @@
 export const LOCALE_STORAGE_KEY = "mmx_director_ui_locale";
 
 const ZH = {
+    "output.normalizeFps": "转为24fps（保持时长）",
+    "tooltip.normalizeFps": "按时间重新取样，保持现有片段、剪辑和导出上限的秒数；不会把两秒视频延长成五秒。",
+    "output.maxSeconds": "导出上限（秒，0=全部）",
+    "output.durationInfo": "预计 {frames} 帧 / {seconds} 秒",
+
     "toolbar.addRefGroup": "添加素材组",
     "toolbar.uploadVideo": "上传视频",
     "toolbar.addShot": "添加一组",
@@ -466,6 +471,11 @@ const ZH = {
 };
 
 const EN = {
+    "output.normalizeFps": "Convert to 24fps (keep duration)",
+    "tooltip.normalizeFps": "Resample by time, preserving edits and export duration. Does not extend a two-second clip to five seconds.",
+    "output.maxSeconds": "Export limit (seconds, 0=all)",
+    "output.durationInfo": "Expected {frames} frames / {seconds}s",
+
     "toolbar.addRefGroup": "Add asset group",
     "toolbar.uploadVideo": "Upload video",
     "toolbar.addShot": "Add shot",

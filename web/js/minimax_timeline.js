@@ -2867,6 +2867,12 @@ class MiniMaxH3DirectorEditor {
             </select>
             <label data-i18n="output.fpsLabel" data-i18n-title="tooltip.fps">帧率</label>
             <input type="number" class="bd-num" data-r="timeline-fps" min="1" max="240" step="0.01" value="24" style="width:64px" data-i18n-title="tooltip.timelineFps">
+            <button type="button" class="bd-btn" data-r="normalize-fps" data-i18n="output.normalizeFps" data-i18n-title="tooltip.normalizeFps">转为24fps（保持时长）</button>
+            <span data-r="out-seconds-wrap">
+                <label data-i18n="output.maxSeconds">导出上限（秒，0=全部）</label>
+                <input type="number" class="bd-num" data-r="out-max-seconds" min="0" step="0.01" value="0" style="width:72px">
+                <span class="bd-meta" data-r="out-duration-info"></span>
+            </span>
             <span class="bd-out-audio-wrap hidden" data-r="out-audio-wrap" data-i18n-title="tooltip.audioMode">
                 <label data-i18n="output.audio.label">声音</label>
                 <select class="bd-select" data-r="out-audio-mode" style="max-width:120px">
@@ -3219,6 +3225,10 @@ class MiniMaxH3DirectorEditor {
         this.outAudioMode = this.root.querySelector('[data-r="out-audio-mode"]');
         this.exportSourceImagesWrap = this.root.querySelector('[data-r="out-source-wrap"]');
         this.exportSourceImagesCb = this.root.querySelector('[data-r="out-export-source"]');
+        this.normalizeFpsButton = this.root.querySelector('[data-r="normalize-fps"]');
+        this.outSecondsWrap = this.root.querySelector('[data-r="out-seconds-wrap"]');
+        this.outMaxSeconds = this.root.querySelector('[data-r="out-max-seconds"]');
+        this.outDurationInfo = this.root.querySelector('[data-r="out-duration-info"]');
         this.outMaxFrames = this.root.querySelector('[data-r="out-max-frames"]');
         this.outExportMode = this.root.querySelector('[data-r="out-export-mode"]');
         this.segmentContinuityWrap = this.root.querySelector('[data-r="segment-continuity-wrap"]');
@@ -3492,6 +3502,8 @@ class MiniMaxH3DirectorEditor {
             clearTimeout(this._fpsInputTimer);
             this._fpsInputTimer = setTimeout(() => this.onFrameRateChanged(this.fpsInput.value), 350);
         };
+        this.normalizeFpsButton.onclick = () => this.onFrameRateChanged(24);
+        this.outMaxSeconds.onchange = () => this.onExportDurationChanged(this.outMaxSeconds.value);
         this.outMaxFrames.onchange = () => this.onOutputField("maxExportFrames", +this.outMaxFrames.value);
         this.outExportMode.onchange = () => this.onOutputField("exportMode", this.outExportMode.value);
         if (this.outAudioMode) {
@@ -4959,6 +4971,8 @@ class MiniMaxH3DirectorEditor {
             this.outHint.textContent = showHint ? genLayoutHint(this.getTaskKey()) : "";
         }
         const isVideoEditTask = isVideoEditTaskKey(taskKey) || taskKey === "r2v";
+        this.normalizeFpsButton?.classList.toggle("hidden", !isVideoEditTaskKey(taskKey));
+        this.outSecondsWrap?.classList.toggle("hidden", !isVideoEditTaskKey(taskKey));
         this.outAudioWrap?.classList.toggle("hidden", !isVideoEditTask);
         this.syncExportSourceImagesUI();
         if (this.outExportMode) {
@@ -5689,6 +5703,25 @@ class MiniMaxH3DirectorEditor {
         return 0;
     }
 
+    onExportDurationChanged(value) {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds) || seconds < 0) {
+            this.syncExportDurationUI();
+            return;
+        }
+        this.onOutputField("maxExportFrames", seconds > 0 ? Math.max(1, Math.round(seconds * this.getFrameRate())) : 0);
+    }
+
+    syncExportDurationUI() {
+        const cap = this.getMaxExportFrames();
+        const fps = this.getFrameRate();
+        if (this.outMaxSeconds) this.outMaxSeconds.value = String(Math.round(cap / fps * 1000) / 1000);
+        if (this.outDurationInfo) {
+            const frames = this.getExportFrameTotal();
+            this.outDurationInfo.textContent = t("output.durationInfo", { frames, seconds: (frames / fps).toFixed(2) });
+        }
+    }
+
     getMaxExportFrames() {
         const n = parseInt(this.timeline.output?.maxExportFrames ?? 0, 10);
         return Number.isFinite(n) && n > 0 ? n : 0;
@@ -5851,7 +5884,11 @@ class MiniMaxH3DirectorEditor {
             this.commit(false, { syncTimeline: true });
             return;
         }
+        // An export cap represents a duration, not a fixed number of playback frames.
+        const cap = Number(this.timeline.output?.maxExportFrames || 0);
+        if (cap > 0) this.timeline.output.maxExportFrames = Math.max(1, Math.round(cap * newFps / oldFps));
         this._resampleTimelineForFrameRate(oldFps, newFps);
+        this.syncOutputUIFromTimeline();
         this.updateVideoNameLabel();
         this.updateOutputPreview();
         this.scheduleRender();
@@ -6155,6 +6192,7 @@ class MiniMaxH3DirectorEditor {
         if (this.outW) this.outW.value = String(out.width ?? 864);
         if (this.outH) this.outH.value = String(out.height ?? 480);
         if (this.outMaxFrames) this.outMaxFrames.value = String(out.maxExportFrames ?? 0);
+        this.syncExportDurationUI();
         if (this.outExportMode) this.outExportMode.value = out.exportMode === "segments" ? "segments" : "all";
         if (this.outAudioMode) {
             const am = normalizeAudioMode(out.audioMode);
@@ -6398,6 +6436,7 @@ class MiniMaxH3DirectorEditor {
     }
 
     updateOutputPreview() {
+        this.syncExportDurationUI();
         if (!this.outPreview) return;
         if (this.isImageBatch() && (this.getTaskKey() === "i2i" || this.getTaskKey() === "i2v")) {
             const out = this.timeline.output || {};
@@ -8327,7 +8366,7 @@ class MiniMaxH3DirectorEditor {
         };
     }
 
-    async _prepareVideoFrames({ fileName, relPath, subfolder, type, statusPrefix, syncNativeFps = true }) {
+    async _prepareVideoFrames({ fileName, relPath, subfolder, type, statusPrefix, syncNativeFps = false }) {
         this.videoNameEl.textContent = `${statusPrefix}: ${fileName}…`;
         const viewUrl = inputViewUrl(relPath, type || "input");
 
