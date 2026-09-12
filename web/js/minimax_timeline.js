@@ -3504,6 +3504,11 @@ class MiniMaxH3DirectorEditor {
         };
         this.normalizeFpsButton.onclick = () => this.onFrameRateChanged(24);
         this.outMaxSeconds.onchange = () => this.onExportDurationChanged(this.outMaxSeconds.value);
+        this.outMaxSeconds.oninput = () => {
+            clearTimeout(this._exportSecondsTimer);
+            const value = this.outMaxSeconds.value;
+            this._exportSecondsTimer = setTimeout(() => this.onExportDurationChanged(value), 350);
+        };
         this.outMaxFrames.onchange = () => this.onOutputField("maxExportFrames", +this.outMaxFrames.value);
         this.outExportMode.onchange = () => this.onOutputField("exportMode", this.outExportMode.value);
         if (this.outAudioMode) {
@@ -5734,7 +5739,7 @@ class MiniMaxH3DirectorEditor {
     }
 
     getFrameRate() {
-        return coerceTimelineFps(this.fpsInput?.value ?? this.frameRateWidget?.value ?? this.timeline.frameRate ?? 24);
+        return coerceTimelineFps(this.timeline.frameRate ?? this.frameRateWidget?.value ?? this.fpsInput?.value ?? 24);
     }
 
     syncFrameRateUI(value = null) {

@@ -93,3 +93,15 @@ test('seconds cap rounds to playable frames, supports unlimited and rejects inva
     e.syncExportDurationUI();
     assert.deepEqual(JSON.parse(e.outDurationInfo.textContent),{frames:240,seconds:'10.00'});
 });
+
+test('uncommitted FPS input cannot change playback rate before resampling', () => {
+    const e = fixture(24, 240, 120);
+    e.fpsInput = {value:'54.19'};
+    assert.equal(e.getFrameRate(),24);
+    e.onFrameRateChanged(e.fpsInput.value);
+    assert.equal(e.getTotalFrames(),542);
+    assert.equal(e.getMaxExportFrames(),271);
+    e.onFrameRateChanged(24);
+    assert.equal(e.getTotalFrames(),240);
+    assert.equal(e.getMaxExportFrames(),120);
+});
