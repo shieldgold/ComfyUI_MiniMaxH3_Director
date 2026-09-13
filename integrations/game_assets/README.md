@@ -31,6 +31,10 @@ python3 integrations/game_assets/client.py \
 
 若提交响应丢失，客户端通过 `operation_key` 在队列和最近 1000 条历史中恢复；找不到唯一任务时保留未知状态，不自动重发。下载经过 ZIP CRC 和文件清单检查，确认有效后原子替换目标文件。服务器只提供已有局域网 ComfyUI 接口，不新增公网监听。
 
+表面重建精度 `surface_resolution` 支持 `256`（默认）和 `128`。CLI 对应 `--surface-resolution 128`。较粗的 128 有时能减少生成网格中的细碎结构，使减面和 UV 排布通过检查，但可能损失薄片或细小浮雕；应对照原始模型回渲再决定。旧工作流不填此参数时仍使用 256。
+
+优化节点也接受内嵌 GLB 的通用 `FILE_3D` 输出，可接 `Load3D` 复用已有模型，仅重跑后处理。其它格式仍会被 GLB 校验拒绝。
+
 ## 产物
 
 每次后处理在 `output/game-assets/<job_id>/` 下创建独立目录：

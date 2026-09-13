@@ -24,7 +24,7 @@ def atomic_json(path: Path, data: dict) -> None:
     os.replace(temporary, path)
 
 
-def validate_config(target_faces=20000, texture_size=1024, preview_size=256):
+def validate_config(target_faces=20000, texture_size=1024, preview_size=256, surface_resolution=256):
     if type(target_faces) is not int or not 1000 <= target_faces <= 100000:
         raise ValueError('target_faces must be an integer between 1000 and 100000')
     if type(texture_size) not in (int, str) or type(preview_size) not in (int, str):
@@ -32,7 +32,9 @@ def validate_config(target_faces=20000, texture_size=1024, preview_size=256):
     texture_size, preview_size = int(texture_size), int(preview_size)
     if texture_size not in (512, 1024, 2048) or preview_size not in (256, 512):
         raise ValueError('Unsupported texture_size or preview_size')
-    return dict(target_faces=target_faces, texture_size=texture_size, preview_size=preview_size)
+    if type(surface_resolution) not in (int, str) or int(surface_resolution) not in (128, 256):
+        raise ValueError('surface_resolution must be 128 or 256')
+    return dict(target_faces=target_faces, texture_size=texture_size, preview_size=preview_size, surface_resolution=int(surface_resolution))
 
 
 def create_job(output_dir) -> Path:
@@ -224,13 +226,13 @@ def terminate_process(process):
 
 
 def run_job(job_dir, target_faces=20000, texture_size=1024, preview_size=256,
-            cancel_check=None, timeout=1800, blender='/usr/bin/blender') -> dict:
+            cancel_check=None, timeout=1800, blender='/usr/bin/blender', surface_resolution=256) -> dict:
     job = Path(job_dir).resolve()
     status = job / 'status.json'
     process = None
     started = time.monotonic()
     try:
-        config = validate_config(target_faces, texture_size, preview_size)
+        config = validate_config(target_faces, texture_size, preview_size, surface_resolution)
         validate_glb(checked_file(job, 'source.glb'))
         config.update(job_dir=str(job), source=str(job / 'source.glb'))
         atomic_json(job / 'config.json', config)

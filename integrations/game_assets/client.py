@@ -68,6 +68,7 @@ def main():
     parser.add_argument('--state', type=Path, required=True)
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--target-faces', type=int, default=20000)
+    parser.add_argument('--surface-resolution', type=int, choices=[128,256], default=256)
     parser.add_argument('--texture-size', type=int, choices=[512,1024,2048], default=1024)
     parser.add_argument('--output', type=Path, default=Path('asset.zip'))
     args = parser.parse_args()
@@ -102,14 +103,14 @@ def main():
         upload = request(base, '/upload/image', body, 'multipart/form-data; boundary=' + boundary)
         prompt = json.loads((Path(__file__).parent / 'workflows' / 'image_to_game_asset_api.json').read_text())
         prompt['122']['inputs']['image'] = '/'.join(x for x in [upload.get('subfolder'), upload['name']] if x)
-        prompt['900']['inputs'].update(target_faces=args.target_faces, texture_size=str(args.texture_size))
+        prompt['900']['inputs'].update(target_faces=args.target_faces, texture_size=str(args.texture_size), surface_resolution=str(args.surface_resolution))
         workflow = json.loads((Path(__file__).parent / 'workflows' / 'image_to_game_asset.json').read_text())
         for node in workflow['nodes']:
             if node['id'] == 122:
                 node['widgets_values'][0] = prompt['122']['inputs']['image']
                 node.setdefault('widgets_values_named', {})['image'] = prompt['122']['inputs']['image']
             elif node['id'] == 900:
-                node['widgets_values'] = [args.target_faces, str(args.texture_size), '256']
+                node['widgets_values'] = [args.target_faces, str(args.texture_size), '256', str(args.surface_resolution)]
         state = {'server':base,'operation_key':operation,'status':'submission_pending','image':str(args.image)}
         args.state.parent.mkdir(parents=True,exist_ok=True)
         # Exclusive creation prevents accidental duplicate submissions from two clients.

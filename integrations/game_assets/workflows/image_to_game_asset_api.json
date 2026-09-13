@@ -823,7 +823,8 @@
       ],
       "target_faces": 20000,
       "texture_size": "1024",
-      "preview_size": "256"
+      "preview_size": "256",
+      "surface_resolution": "256"
     }
   },
   "901": {

@@ -49,7 +49,10 @@ source_count = tris(high)
 select(low)
 remesh = low.modifiers.new('Continuous_surface', 'REMESH')
 remesh.mode = 'VOXEL'
-remesh.voxel_size = max(low.dimensions) / 256
+surface_resolution = int(cfg.get('surface_resolution', 256))
+if surface_resolution not in (128, 256):
+    raise ValueError('Unsupported surface reconstruction resolution')
+remesh.voxel_size = max(low.dimensions) / surface_resolution
 remesh.use_smooth_shade = True
 bpy.ops.object.modifier_apply(modifier=remesh.name)
 reduce(low, int(cfg['target_faces']))
@@ -237,5 +240,5 @@ geometry_checks = {'finite_vertices': all(math.isfinite(c) for v in bm.verts for
 bm.free()
 if not geometry_checks['finite_vertices'] or not geometry_checks['uv_layers']:
     raise RuntimeError('Invalid optimized geometry')
-report = {'geometry_checks':geometry_checks,'schema_version':1,'triangle_counts':counts,'texture_size':size,'dimensions':list(maximum-minimum),'collision':'axis-aligned bounding box; manual fit recommended','status':'candidate_requires_visual_review','limitations':['Automated decimation is not animation-ready retopology','Unseen surfaces depend on the source generator','Transparent and custom engine shaders require separate authoring','LOD seams and bake projection require visual inspection'],'views':['front','back','left','right','top','bottom'],'blender_version':bpy.app.version_string}
+report = {'surface_resolution':surface_resolution,'geometry_checks':geometry_checks,'schema_version':1,'triangle_counts':counts,'texture_size':size,'dimensions':list(maximum-minimum),'collision':'axis-aligned bounding box; manual fit recommended','status':'candidate_requires_visual_review','limitations':['Automated decimation is not animation-ready retopology','Unseen surfaces depend on the source generator','Transparent and custom engine shaders require separate authoring','LOD seams and bake projection require visual inspection'],'views':['front','back','left','right','top','bottom'],'blender_version':bpy.app.version_string}
 (job / 'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))

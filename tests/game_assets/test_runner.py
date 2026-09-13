@@ -70,6 +70,13 @@ class RunnerTests(unittest.TestCase):
                 runner.validate_config(*args)
         self.assertEqual(runner.validate_config()['target_faces'], 20000)
 
+    def test_surface_resolution_bounds_and_backward_default(self):
+        self.assertEqual(runner.validate_config()['surface_resolution'], 256)
+        self.assertEqual(runner.validate_config(surface_resolution='128')['surface_resolution'], 128)
+        for invalid in [0, 64, 512, True, 128.5, 'bad']:
+            with self.assertRaises(ValueError):
+                runner.validate_config(surface_resolution=invalid)
+
     def test_invalid_glb(self):
         for content in [b'', b'not a glb', struct.pack('<4sII', b'glTF', 1, 12), glb()[:-1]]:
             (self.job / 'source.glb').write_bytes(content)

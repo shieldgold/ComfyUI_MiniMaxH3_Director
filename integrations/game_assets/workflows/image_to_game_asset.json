@@ -3337,7 +3337,7 @@
       "inputs": [
         {
           "name": "model_3d",
-          "type": "FILE_3D_GLB",
+          "type": "FILE_3D_GLB,FILE_3D",
           "link": 1300
         }
       ],
@@ -3371,6 +3371,7 @@
       "widgets_values": [
         20000,
         "1024",
+        "256",
         "256"
       ]
     },

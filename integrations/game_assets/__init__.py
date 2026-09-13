@@ -10,11 +10,11 @@ class GameAssetBlenderOptimize:
     @classmethod
     def INPUT_TYPES(cls):
         return {'required': {
-            'model_3d': ('FILE_3D_GLB',),
+            'model_3d': ('FILE_3D_GLB,FILE_3D',),
             'target_faces': ('INT', {'default': 20000, 'min': 1000, 'max': 100000}),
             'texture_size': (['512', '1024', '2048'], {'default': '1024'}),
             'preview_size': (['256', '512'], {'default': '256'}),
-        }}
+        }, 'optional': {'surface_resolution': (['128', '256'], {'default': '256'})}}
 
     RETURN_TYPES = ('FILE_3D_GLB', 'STRING', 'STRING', 'IMAGE')
     RETURN_NAMES = ('model_3d', 'report', 'bundle_path', 'six_views')
@@ -22,7 +22,7 @@ class GameAssetBlenderOptimize:
     CATEGORY = 'Game Assets'
     OUTPUT_NODE = True
 
-    def optimize(self, model_3d, target_faces=20000, texture_size='1024', preview_size='256'):
+    def optimize(self, model_3d, target_faces=20000, texture_size='1024', preview_size='256', surface_resolution='256'):
         import folder_paths
         import comfy.model_management
         from comfy_api.latest import Types
@@ -30,7 +30,7 @@ class GameAssetBlenderOptimize:
         from PIL import Image
         import torch
 
-        settings = validate_config(target_faces, texture_size, preview_size)
+        settings = validate_config(target_faces, texture_size, preview_size, surface_resolution)
         output = Path(folder_paths.get_output_directory()).resolve()
         job = create_job(output)
         atomic_json(job / 'status.json', {'state': 'saving_source'})
