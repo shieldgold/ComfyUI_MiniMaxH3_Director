@@ -1,0 +1,33 @@
+{
+  "host": "10.10.11.8",
+  "port": 8090,
+  "backend": "cuda",
+  "device": 0,
+  "threads": 4,
+  "ui": true,
+  "lazy_load": true,
+  "max_loaded_models": 1,
+  "idle_unload_ms": 300000,
+  "min_free_memory_mb": 8192,
+  "log_request_body": false,
+  "max_request_body_bytes": 33554432,
+  "models": [
+    {
+      "id": "qwen3-tts-customvoice",
+      "family": "qwen3_tts",
+      "path": "/model/audio-cpp/Qwen3-TTS-12Hz-1.7B-CustomVoice-GGUF/qwen3-tts-12hz-1.7b-customvoice-q8_0.gguf",
+      "task": "tts",
+      "mode": "offline",
+      "default_voice_preset": {"voice_id": "Vivian"},
+      "default_request_options": {"language": "chinese"}
+    },
+    {
+      "id": "qwen3-tts-clone",
+      "family": "qwen3_tts",
+      "path": "/model/audio-cpp/Qwen3-TTS-12Hz-1.7B-Base-GGUF/qwen3-tts-12hz-1.7b-base-q8_0_v2.gguf",
+      "task": "tts",
+      "mode": "offline",
+      "default_request_options": {"language": "chinese"}
+    }
+  ]
+}

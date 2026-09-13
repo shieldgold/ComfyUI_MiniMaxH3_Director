@@ -1,0 +1,2 @@
+b55e06c7890d43c208d15aed8b4ed3f18215f295e47d5960e061b15bff338ab0  /model/audio-cpp/Qwen3-TTS-12Hz-1.7B-Base-GGUF/qwen3-tts-12hz-1.7b-base-q8_0_v2.gguf
+3cfaac8e9f13554f6daea3c5e0c53fede71ef5500cbaae7445e5fc3a5bb12e72  /model/audio-cpp/Qwen3-TTS-12Hz-1.7B-CustomVoice-GGUF/qwen3-tts-12hz-1.7b-customvoice-q8_0.gguf

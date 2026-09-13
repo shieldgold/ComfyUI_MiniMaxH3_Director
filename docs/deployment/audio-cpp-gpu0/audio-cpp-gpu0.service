@@ -1,0 +1,28 @@
+[Unit]
+Description=audio.cpp Qwen3 TTS on GPU0
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/model
+
+[Service]
+Type=simple
+User=audiocpp
+Group=audiocpp
+WorkingDirectory=/var/lib/audio-cpp
+Environment=CUDA_VISIBLE_DEVICES=0
+Environment=LD_LIBRARY_PATH=/opt/audio.cpp/runtime/lib
+Environment=HOME=/var/lib/audio-cpp
+Environment=XDG_CACHE_HOME=/var/lib/audio-cpp/cache
+Environment=HF_ENDPOINT=https://hf-mirror.com
+ExecStart=/opt/audio.cpp/releases/v0.7.4/audiocpp_server --config /etc/audio-cpp/server.json --ui
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/audio-cpp
+
+[Install]
+WantedBy=multi-user.target
