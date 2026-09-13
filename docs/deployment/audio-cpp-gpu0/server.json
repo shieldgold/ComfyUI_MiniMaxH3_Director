@@ -18,8 +18,12 @@
       "path": "/model/audio-cpp/Qwen3-TTS-12Hz-1.7B-CustomVoice-GGUF/qwen3-tts-12hz-1.7b-customvoice-q8_0.gguf",
       "task": "tts",
       "mode": "offline",
-      "default_voice_preset": {"voice_id": "Vivian"},
-      "default_request_options": {"language": "chinese"}
+      "default_voice_preset": {
+        "voice_id": "Vivian"
+      },
+      "default_request_options": {
+        "language": "chinese"
+      }
     },
     {
       "id": "qwen3-tts-clone",
@@ -27,7 +31,24 @@
       "path": "/model/audio-cpp/Qwen3-TTS-12Hz-1.7B-Base-GGUF/qwen3-tts-12hz-1.7b-base-q8_0_v2.gguf",
       "task": "tts",
       "mode": "offline",
-      "default_request_options": {"language": "chinese"}
+      "default_request_options": {
+        "language": "chinese"
+      }
+    },
+    {
+      "id": "ace-step-music",
+      "family": "ace_step",
+      "path": "/model/audio-cpp/ACE-Step1.5-GGUF/turbo/ace-step-1.5-turbo-bf16.gguf",
+      "task": "gen",
+      "mode": "offline",
+      "session_options": {
+        "ace_step.mem_saver": "true"
+      },
+      "default_request_options": {
+        "route": "text2music",
+        "duration_seconds": "30",
+        "num_inference_steps": "8"
+      }
     }
   ]
 }

@@ -1,6 +1,6 @@
 # audio.cpp GPU0 部署
 
-目标：在 `10.10.11.8` 第一张卡（GPU0，CMP 170HX 64GB，SM80）上提供中文配音与声音克隆网页/API。与原有 GPU0 Qwen 服务共用显卡；不停止或改动原有 Qwen 配置。
+目标：在 `10.10.11.8` 第一张卡（GPU0，CMP 170HX 64GB，SM80）上提供中文配音、声音克隆与音乐生成网页/API。与原有 GPU0 Qwen 服务共用显卡；不停止或改动原有 Qwen 配置。
 
 ## 固定版本和目录
 
@@ -15,7 +15,7 @@
 
 ## 模型来源
 
-模型从 `https://hf-mirror.com/audio-cpp/audio.cpp-gguf/resolve/main/` 下载。
+前两个语音模型通过 `https://hf-mirror.com/audio-cpp/audio.cpp-gguf/resolve/main/` 下载；这个入口不保证文件实际来自国内 IP。音乐模型的国内下载记录见下文。
 
 - Qwen3-TTS 1.7B CustomVoice Q8_0：预设音色中文配音，API id `qwen3-tts-customvoice`，默认 Vivian。
 - Qwen3-TTS 1.7B Base Q8_0 v2：参考音频克隆，API id `qwen3-tts-clone`。
@@ -59,3 +59,24 @@ systemctl restart audio-cpp-gpu0.service
 - 功能验证通过；声音相似度、自然度和长文稳定性仍需使用者试听/进一步测试，本次没有把 WAV 有效性当作主观音质验收。
 
 安装时发行包顶层目录带 0700 权限，已将 `/opt/audio.cpp/releases/v0.7.4` 调整为 root 所有、0755，解决专用服务用户无法执行的问题。GGUF 内嵌旧版 spec，运行时按发行版自带 schema-v1 契约验证，实际两条推理均成功。
+
+## 2026-09-14 音乐生成与国内下载修正
+
+新增 ACE-Step 1.5 Turbo BF16，API id `ace-step-music`，family `ace_step`，task `gen`，route `text2music`。启用 `ace_step.mem_saver=true`，默认 30 秒、8 步；与两个语音模型共享最多加载一个模型的限制。
+
+音乐模型大小为 10,090,398,272 字节。最初 hf-mirror 下载的实际连接是海外 IP `13.33.183.18`，因此停止该下载并换用 ModelScope 断点续传：
+
+https://www.modelscope.cn/models/HereIsMark/audio.cpp-gguf/resolve/master/ACE-Step1.5-GGUF/turbo/ace-step-1.5-turbo-bf16.gguf
+
+切换后实际文件连接为 `112.48.172.165:443`，观测约 100–115 MiB/s；[该 IP 所属网段标记为中国](https://ipinfo.io/ips/112.48.0.0/16)。这是本次连接观测，不保证未来 CDN 调度；以后下载应核验重定向后的实际 IP。完成后整文件 SHA-256 与原始 LFS 元数据以及 ModelScope X-Linked-Etag 一致。
+
+下载日志、模型校验、请求及结果保存在 `/var/lib/audio-cpp/music-acceptance/`。变更前配置备份为该目录下 `server-before-music.json`。systemd 中历史 `HF_ENDPOINT` 变量仅为 Hugging Face 客户端入口，不代表国内连接保证；本次音乐权重使用上述 ModelScope 链接手动安装，网页不开放模型下载管理。
+
+实测：
+
+- 带原创中文歌词的 20 秒请求耗时 27.79 秒（包含加载），返回 48kHz 双声道 WAV，3,840,044 字节；样片 `ace-step-song.wav`，SHA-256 为 `dd642fd9542008a7488f1f60f9ae9ff1bfde06e3560fa617e0968a3275c25449`。
+- Chrome 页面出现“音乐生成 1”及 ACE-Step 模型；输入纯音乐描述、时长 10 秒，网页显示 4.72 秒完成、10 秒双声道音轨及保存 WAV。点击播放后按钮切换为 pause。
+- audio.cpp PID 3959113 确认运行在物理 GPU0，观测约 10,124 MiB 显存（非峰值）。原有三个 Qwen 服务保持 active，GPU0 Qwen 与 vision 健康接口均 HTTP 200。
+- 已验证真实推理、音频格式及网页播放；音乐审美、歌词准确度与歌声质量由使用者试听评估。
+
+使用时刷新 `http://10.10.11.8:8090/`，选择“音乐生成”，填写提示词，可选填歌词，设置时长后运行。首次加载和从语音模型切换会额外耗时。
