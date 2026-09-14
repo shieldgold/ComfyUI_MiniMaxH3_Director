@@ -31,3 +31,7 @@ GPU3 实例使用独立代码 `/opt/ComfyUI-pixal-multiview`，基础版本 `efa
 2026-09-15：模型哈希通过，节点齐全；真实四图任务 `06fbbf5d-9558-4f1a-8924-0414388c5f09` 成功，耗时约 120.86 秒。输出 `3d/Pixal3D_multiview_00001.glb`，20,139,516 字节，49,960 三角面、1 个材质、3 张内嵌纹理。首次 API 转换曾遗漏动态下拉参数，后按命名参数修正，完整任务 node_errors 为空。
 
 验收证据目录：服务器 `/var/lib/comfyui/gpu3/multiview-acceptance/`。官方工作流来源：https://github.com/Comfy-Org/ComfyUI/pull/16048 。官方样例：https://github.com/TencentARC/Pixal3D/tree/master/assets/mv_images/example 。
+
+网页验收任务 `b8ef8bfb-d008-4458-b76a-65efbf409dee` 也成功，176.80 秒，结果 `3d/Pixal3D_multiview_00002.glb` 已出现在媒体资产列表。四张默认输入已调整到 input 根目录，解决前端对有效子目录图片的缺失误报。连接、视角、资源参数三个离线测试通过：`python3 verify_workflow.py`。
+
+原单图回归任务进入采样后被中断，记录为 execution_interrupted，不能当作完整单图回归通过。当前验收确认多视图运行与文件结构有效；尚未完成成品与四视图的逐面视觉质量评审。
