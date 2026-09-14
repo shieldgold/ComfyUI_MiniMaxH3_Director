@@ -1,0 +1,33 @@
+# Pixal3D 四视图部署
+
+新增工作流 `Pixal3D/pixal3d_multiview_4images.json`，保留原单图模板。四个 LoadImage 按正面、左侧、背面、右侧连接到 Pixal3DMultiViewConditioning，共同生成一份带纹理 GLB。
+
+## 运行与回滚
+
+GPU3 实例使用独立代码 `/opt/ComfyUI-pixal-multiview`，基础版本 `efa6c8f8`；仅应用官方已合并 PR 16048 的两个文件改动，补丁随本目录留档。共用已有 Python 环境与模型目录，保留原有自定义节点副本。其他 GPU 实例继续使用 `/opt/ComfyUI`。
+
+服务覆盖项为 `comfyui-gpu3.service.d/multiview.conf`，内容见同名文件。回滚可移走该覆盖项，执行 systemctl daemon-reload，再重启空闲的 comfyui-gpu3；原代码及单图工作流未改。
+
+## 模型来源和校验
+
+- 文件：`pixal3d_multiview_int8_convrot.safetensors`
+- 大小：5,584,555,824 字节
+- SHA256：`6b1eb3328930d921d3b57508d9c46cceec1c174dcedeebc14f176ab67d49f477`
+- 下载源：https://www.modelscope.cn/models/Comfy-Org/Pixal3D/resolve/master/diffusion_models/pixal3d_multiview_int8_convrot.safetensors
+- 本次实际下载连接为国内 CDN `112.48.179.223`，探测连接 `112.48.183.211`。重定向地址会变，后续仍应检查实际连接。完整文件哈希与官方 Hugging Face LFS 元数据一致。
+
+## 使用
+
+在工作流列表的 Pixal3D 目录打开多视图文件，替换四张图后运行。默认图是 TencentARC/Pixal3D 官方 example，不是用户资产。
+
+输入应是同一物体四个相隔 90 度、同高度的视角，顺序 front / left / back / right，对应官方方位角 0 / 90 / 180 / 270。图像保持共同的尺度、居中、方形黑底，最大尺寸约占画面 91%；不要独立裁剪成不同缩放比例。透明图建议先合成到黑底。FOV 默认 20 度。任意手机拍摄角度不等价于该固定环绕相机模板，需要先匹配视角与相机。
+
+缺少侧面可断开相应输入，至少保留正面。不是将多张图拼成一张，也不是对四张图分别生成四个模型。
+
+默认 1024 体素分辨率、512 重网格、约 5 万三角面，输出前缀 `3d/Pixal3D_multiview`。这是重建模型，不代表已经具备游戏拓扑、骨骼或引擎验收。
+
+## 实测
+
+2026-09-15：模型哈希通过，节点齐全；真实四图任务 `06fbbf5d-9558-4f1a-8924-0414388c5f09` 成功，耗时约 120.86 秒。输出 `3d/Pixal3D_multiview_00001.glb`，20,139,516 字节，49,960 三角面、1 个材质、3 张内嵌纹理。首次 API 转换曾遗漏动态下拉参数，后按命名参数修正，完整任务 node_errors 为空。
+
+验收证据目录：服务器 `/var/lib/comfyui/gpu3/multiview-acceptance/`。官方工作流来源：https://github.com/Comfy-Org/ComfyUI/pull/16048 。官方样例：https://github.com/TencentARC/Pixal3D/tree/master/assets/mv_images/example 。
